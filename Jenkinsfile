@@ -18,8 +18,9 @@ pipeline {
         // ================= CHECKOUT =================
         stage('Checkout Code') {
             steps {
-                git url: 'https://github.com/Jeyashreenirmal/StreamingApp.git',
-                    credentialsId: 'github-tokenjsree'  // <-- your GitHub token ID
+                git branch: 'main',
+                    url: 'https://github.com/Jeyashreenirmal/StreamingApp.git',
+                    credentialsId: 'github-tokenjsree'         
             }
         }
 
