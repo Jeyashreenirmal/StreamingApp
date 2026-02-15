@@ -1,123 +1,103 @@
 pipeline {
-    agent any
+  agent any
 
-    environment {
-        AWS_REGION      = 'us-east-1'
-        AWS_ACCOUNT_ID  = '975050024946'
-        IMAGE_TAG       = "${BUILD_NUMBER}"
+  stages {
 
-        FRONTEND_REPO   = 'my-app'
-        ADMIN_REPO      = 'backend-jsree'
-        AUTH_REPO       = 'backend2-jsree'
-        CHAT_REPO       = 'backend3-jsree'
-        STREAMING_REPO  = 'backend4-jsree'
+    stage('Checkout') {
+      steps {
+        git branch: 'main',
+            url: 'https://github.com/Jeyashreenirmal/StreamingApp.git',
+            credentialsId: 'github-tokenjsree'
+      }
     }
 
-    stages {
-
-        // ================= CHECKOUT =================
-        stage('Checkout Code') {
-            steps {
-                git branch: 'main',
-                    url: 'https://github.com/Jeyashreenirmal/StreamingApp.git',
-                    credentialsId: 'github-tokenjsree'         
-            }
+    stage('Login to AWS ECR') {
+      steps {
+        withCredentials([[
+          $class: 'AmazonWebServicesCredentialsBinding',
+          credentialsId: 'aws-credentials'
+        ]]) {
+          sh '''
+            aws ecr get-login-password --region us-east-1 | \
+            docker login --username AWS --password-stdin \
+            975050024946.dkr.ecr.us-east-1.amazonaws.com
+          '''
         }
-
-        // ================= AWS LOGIN =================
-        stage('Login to AWS ECR') {
-            steps {
-                withCredentials([[
-                    $class: 'AmazonWebServicesCredentialsBinding',
-                    credentialsId: 'aws-credentials'  // <-- your AWS creds ID
-                ]]) {
-                    sh """
-                    echo "Logging in to AWS ECR..."
-                    aws ecr get-login-password --region ${AWS_REGION} | \
-                    docker login --username AWS --password-stdin \
-                    ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
-                    """
-                }
-            }
-        }
-
-        // ================= FRONTEND =================
-        stage('Build & Push Frontend') {
-            steps {
-                dir('frontend') {
-                    sh """
-                    docker build -t $FRONTEND_REPO:$IMAGE_TAG .
-                    docker tag $FRONTEND_REPO:$IMAGE_TAG \
-                    $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$FRONTEND_REPO:$IMAGE_TAG
-                    docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$FRONTEND_REPO:$IMAGE_TAG
-                    """
-                }
-            }
-        }
-
-        // ================= ADMIN SERVICE =================
-        stage('Build & Push Admin Service') {
-            steps {
-                dir('backend/adminService') {
-                    sh """
-                    docker build -t $ADMIN_REPO:$IMAGE_TAG .
-                    docker tag $ADMIN_REPO:$IMAGE_TAG \
-                    $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ADMIN_REPO:$IMAGE_TAG
-                    docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ADMIN_REPO:$IMAGE_TAG
-                    """
-                }
-            }
-        }
-
-        // ================= AUTH SERVICE =================
-        stage('Build & Push Auth Service') {
-            steps {
-                dir('backend/authService') {
-                    sh """
-                    docker build -t $AUTH_REPO:$IMAGE_TAG .
-                    docker tag $AUTH_REPO:$IMAGE_TAG \
-                    $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$AUTH_REPO:$IMAGE_TAG
-                    docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$AUTH_REPO:$IMAGE_TAG
-                    """
-                }
-            }
-        }
-
-        // ================= CHAT SERVICE =================
-        stage('Build & Push Chat Service') {
-            steps {
-                dir('backend/chatService') {
-                    sh """
-                    docker build -t $CHAT_REPO:$IMAGE_TAG .
-                    docker tag $CHAT_REPO:$IMAGE_TAG \
-                    $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$CHAT_REPO:$IMAGE_TAG
-                    docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$CHAT_REPO:$IMAGE_TAG
-                    """
-                }
-            }
-        }
-
-        // ================= STREAMING SERVICE =================
-        stage('Build & Push Streaming Service') {
-            steps {
-                dir('backend/streamingService') {
-                    sh """
-                    docker build -t $STREAMING_REPO:$IMAGE_TAG .
-                    docker tag $STREAMING_REPO:$IMAGE_TAG \
-                    $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$STREAMING_REPO:$IMAGE_TAG
-                    docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$STREAMING_REPO:$IMAGE_TAG
-                    """
-                }
-            }
-        }
+      }
     }
 
-    post {
-        success {
-            echo "✅ All images built and pushed successfully!"
+    // ================= FRONTEND =================
+    stage('Build & Push Frontend') {
+      steps {
+        dir('frontend') {
+          sh '''
+            docker build -t my-app:latest .
+            docker tag my-app:latest 975050024946.dkr.ecr.us-east-1.amazonaws.com/my-app:latest
+            docker push 975050024946.dkr.ecr.us-east-1.amazonaws.com/my-app:latest
+          '''
         }
-        failure {
-            echo "❌ Build failed. Check the logs."
-        }
+      }
     }
+
+    // ================= ADMIN SERVICE =================
+    stage('Build & Push Admin Service') {
+      steps {
+        dir('backend/adminService') {
+          sh '''
+            docker build -t backend-jsree:admin .
+            docker tag backend-jsree:admin 975050024946.dkr.ecr.us-east-1.amazonaws.com/backend-jsree:admin
+            docker push 975050024946.dkr.ecr.us-east-1.amazonaws.com/backend-jsree:admin
+          '''
+        }
+      }
+    }
+
+    // ================= AUTH SERVICE =================
+    stage('Build & Push Auth Service') {
+      steps {
+        dir('backend/authService') {
+          sh '''
+            docker build -t backend2-jsree:auth .
+            docker tag backend2-jsree:auth 975050024946.dkr.ecr.us-east-1.amazonaws.com/backend2-jsree:auth
+            docker push 975050024946.dkr.ecr.us-east-1.amazonaws.com/backend2-jsree:auth
+          '''
+        }
+      }
+    }
+
+    // ================= CHAT SERVICE =================
+    stage('Build & Push Chat Service') {
+      steps {
+        dir('backend/chatService') {
+          sh '''
+            docker build -t backend3-jsree:chat .
+            docker tag backend3-jsree:chat 975050024946.dkr.ecr.us-east-1.amazonaws.com/backend3-jsree:chat
+            docker push 975050024946.dkr.ecr.us-east-1.amazonaws.com/backend3-jsree:chat
+          '''
+        }
+      }
+    }
+
+    // ================= STREAMING SERVICE =================
+    stage('Build & Push Streaming Service') {
+      steps {
+        dir('backend/streamingService') {
+          sh '''
+            docker build -t backend4-jsree:streaming .
+            docker tag backend4-jsree:streaming 975050024946.dkr.ecr.us-east-1.amazonaws.com/backend4-jsree:streaming
+            docker push 975050024946.dkr.ecr.us-east-1.amazonaws.com/backend4-jsree:streaming
+          '''
+        }
+      }
+    }
+  }
+
+  post {
+    success {
+      echo '✅ All services built and pushed successfully'
+    }
+    failure {
+      echo '❌ Pipeline failed'
+    }
+  }
 }
