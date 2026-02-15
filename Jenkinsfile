@@ -1,34 +1,46 @@
-
 pipeline {
     agent any
 
     environment {
-        AWS_REGION = 'us-east-1'
-        AWS_ACCOUNT_ID = '975050024946'
-        IMAGE_TAG = "${BUILD_NUMBER}"
+        AWS_REGION      = 'us-east-1'
+        AWS_ACCOUNT_ID  = '975050024946'
+        IMAGE_TAG       = "${BUILD_NUMBER}"
 
-        FRONTEND_REPO = 'my-app'
-        ADMIN_REPO = 'backend-jsree'
-        AUTH_REPO = 'backend2-jsree'
-        CHAT_REPO = 'backend3-jsree'
-        STREAMING_REPO = 'backend4-jsree'
+        FRONTEND_REPO   = 'my-app'
+        ADMIN_REPO      = 'backend-jsree'
+        AUTH_REPO       = 'backend2-jsree'
+        CHAT_REPO       = 'backend3-jsree'
+        STREAMING_REPO  = 'backend4-jsree'
     }
 
     stages {
 
-
-        stage('Login to ECR') {
+        // ================= CHECKOUT =================
+        stage('Checkout Code') {
             steps {
-                sh """
-                aws ecr get-login-password --region $AWS_REGION | \
-                docker login --username AWS --password-stdin \
-                $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
-                """
+                git url: 'https://github.com/Jeyashreenirmal/StreamingApp.git',
+                    credentialsId: 'github-tokenjsree'  // <-- your GitHub token ID
+            }
+        }
+
+        // ================= AWS LOGIN =================
+        stage('Login to AWS ECR') {
+            steps {
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-credentials'  // <-- your AWS creds ID
+                ]]) {
+                    sh """
+                    echo "Logging in to AWS ECR..."
+                    aws ecr get-login-password --region $AWS_REGION | \
+                    docker login --username AWS --password-stdin \
+                    $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
+                    """
+                }
             }
         }
 
         // ================= FRONTEND =================
-
         stage('Build & Push Frontend') {
             steps {
                 dir('frontend') {
@@ -36,15 +48,13 @@ pipeline {
                     docker build -t $FRONTEND_REPO:$IMAGE_TAG .
                     docker tag $FRONTEND_REPO:$IMAGE_TAG \
                     $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$FRONTEND_REPO:$IMAGE_TAG
-                    docker push \
-                    $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$FRONTEND_REPO:$IMAGE_TAG
+                    docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$FRONTEND_REPO:$IMAGE_TAG
                     """
                 }
             }
         }
 
-        // ================= AUTH =================
-
+        // ================= ADMIN SERVICE =================
         stage('Build & Push Admin Service') {
             steps {
                 dir('backend/adminService') {
@@ -52,47 +62,41 @@ pipeline {
                     docker build -t $ADMIN_REPO:$IMAGE_TAG .
                     docker tag $ADMIN_REPO:$IMAGE_TAG \
                     $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ADMIN_REPO:$IMAGE_TAG
-                    docker push \
-                    $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ADMIN_REPO:$IMAGE_TAG
+                    docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ADMIN_REPO:$IMAGE_TAG
                     """
                 }
             }
         }
 
-        // ================= USERS =================
-
-        stage('Build & Push  auth Service') {
+        // ================= AUTH SERVICE =================
+        stage('Build & Push Auth Service') {
             steps {
                 dir('backend/authService') {
                     sh """
                     docker build -t $AUTH_REPO:$IMAGE_TAG .
                     docker tag $AUTH_REPO:$IMAGE_TAG \
                     $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$AUTH_REPO:$IMAGE_TAG
-                    docker push \
-                    $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$AUTH_REPO:$IMAGE_TAG
+                    docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$AUTH_REPO:$IMAGE_TAG
                     """
                 }
             }
         }
 
-        // ================= MOVIES =================
-
-        stage('Build & Push chat Service') {
+        // ================= CHAT SERVICE =================
+        stage('Build & Push Chat Service') {
             steps {
                 dir('backend/chatService') {
                     sh """
                     docker build -t $CHAT_REPO:$IMAGE_TAG .
                     docker tag $CHAT_REPO:$IMAGE_TAG \
                     $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$CHAT_REPO:$IMAGE_TAG
-                    docker push \
-                    $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$CHAT_REPO:$IMAGE_TAG
+                    docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$CHAT_REPO:$IMAGE_TAG
                     """
                 }
             }
         }
 
-        // ================= PAYMENTS =================
-
+        // ================= STREAMING SERVICE =================
         stage('Build & Push Streaming Service') {
             steps {
                 dir('backend/streamingService') {
@@ -100,8 +104,7 @@ pipeline {
                     docker build -t $STREAMING_REPO:$IMAGE_TAG .
                     docker tag $STREAMING_REPO:$IMAGE_TAG \
                     $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$STREAMING_REPO:$IMAGE_TAG
-                    docker push \
-                    $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$STREAMING_REPO:$IMAGE_TAG
+                    docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$STREAMING_REPO:$IMAGE_TAG
                     """
                 }
             }
@@ -110,10 +113,10 @@ pipeline {
 
     post {
         success {
-            echo "All images built and pushed successfully!"
+            echo "✅ All images built and pushed successfully!"
         }
         failure {
-            echo "Build failed. Check logs."
+            echo "❌ Build failed. Check the logs."
         }
     }
 }
