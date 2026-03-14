@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chatservice
+  namespace: streaming-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      component: chatservice
+  template:
+    metadata:
+      labels:
+        component: chatservice
+    spec:
+      containers:
+        - name: chatservice
+          image: 975050024946.dkr.ecr.us-east-1.amazonaws.com/backend3-jsree:chat
+          imagePullPolicy: Always
+
+          ports:
+            - containerPort: 3004  # React default port
+          env:
+            - name: MONGO_URI
+              valueFrom:
+                secretKeyRef:
+                  name: app-secret
+                  key: MONGO_LINK
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: app-secret
+                  key: JWS_PASS
+            - name: CLIENT_URLS
+              value: "http://localhost:3000"
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 3004
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 3
+
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 3004
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"

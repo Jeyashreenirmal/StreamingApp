@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: streaming-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      component: frontend
+  template:
+    metadata:
+      labels:
+        component: frontend
+    spec:
+      containers:
+        - name: frontend
+          image: 975050024946.dkr.ecr.us-east-1.amazonaws.com/my-app:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80  # React default port
+          env:
+            - name: REACT_APP_AUTH_API_URL
+              value: "/api"
+            - name: REACT_APP_STREAMING_API_URL
+              value: "/api/streaming"
+            - name: REACT_APP_STREAMING_PUBLIC_URL
+              value: "/api/streaming"
+            - name: REACT_APP_ADMIN_API_URL
+              value: "/api/admin"
+            - name: REACT_APP_CHAT_API_URL
+              value: "/api/chat"
+            - name: REACT_APP_CHAT_SOCKET_URL
+              value: ""
+
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 3
+
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"

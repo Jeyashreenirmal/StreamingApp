@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: streamingservice
+  namespace: streaming-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      component: streamingservice
+  template:
+    metadata:
+      labels:
+        component: streamingservice
+    spec:
+      containers:
+        - name: streamingservice
+          image: 975050024946.dkr.ecr.us-east-1.amazonaws.com/backend4-jsree:streaming
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3002
+
+          env:
+            - name: MONGO_URI
+              valueFrom:
+                secretKeyRef:
+                  name: app-secret
+                  key: MONGO_LINK
+
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: app-secret
+                  key: JWS_PASS
+
+            - name: CLIENT_URLS
+              value: "http://localhost:3000"
+
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: app-secret
+                  key: AWS_KEY_ID
+
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: app-secret
+                  key: AWS_ACCESS_KEY
+
+            - name: AWS_REGION
+              value: "us-east-1"
+
+            - name: AWS_S3_BUCKET
+              value: "jsree-streaming-app"
+
+            - name: AWS_CDN_URL
+              value: ""
+
+            - name: STREAMING_PUBLIC_URL
+              value: "http://streamingservice:3002"
+
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 3002
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 3
+
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 3002
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"

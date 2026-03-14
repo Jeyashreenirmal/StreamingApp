@@ -1,0 +1,13 @@
+region: us-east-1
+s3: jsree-streaming-app
+replica: 1
+namespace: streaming-app
+type: ClusterIP
+
+resources:
+  requests:
+    cpu: "200m"
+    memory: "256Mi"
+  limits:
+    cpu: "500m"
+    memory: "512Mi"

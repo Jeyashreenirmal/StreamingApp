@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: adminservice
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: {{ .Values.replica }}
+  selector:
+    matchLabels:
+      component: adminservice
+  template:
+    metadata:
+      labels:
+        component: adminservice
+    spec:
+      containers:
+        - name: adminservice
+          image: 975050024946.dkr.ecr.us-east-1.amazonaws.com/backend-jsree:admin
+          imagePullPolicy: Always
+
+          ports:
+            - containerPort: 3003
+
+          env:
+            - name: MONGO_URI
+              valueFrom:
+                secretKeyRef:
+                  name: app-secret
+                  key: MONGO_LINK
+
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: app-secret
+                  key: JWS_PASS
+
+            - name: CLIENT_URLS
+              value: "http://localhost:3000"
+
+            - name: AWS_REGION
+              value: "{{ .Values.region }}"
+
+            - name: AWS_S3_BUCKET
+              value: "{{ .Values.s3 }}"
+
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: app-secret
+                  key: AWS_KEY_ID
+
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: app-secret
+                  key: AWS_ACCESS_KEY
+
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 3003
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 3
+
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 3003
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+
+          resources:
+            requests:
+              cpu: "{{ .Values.resources.requests.cpu }}"
+              memory: "{{ .Values.resources.requests.memory }}"
+            limits:
+              cpu: "{{ .Values.resources.limits.cpu }}"
+              memory: "{{ .Values.resources.limits.memory }}"
