@@ -110,3 +110,4 @@ step 26 --- SNS (email) notification
 
 ![ SNS alert ](screenshots/SNS_alert.png)
 
+step 27 --- Have writtern Helm chart files 
